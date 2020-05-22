@@ -2,21 +2,24 @@ package main
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"log"
 	"net/http"
 
 	"github.com/renegmed/inventoryservice/product"
 )
 
-type fooHandler struct {
-	Message string
-}
-
 var productList []product.Product
 
-// func (f *fooHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-// 	w.Write([]byte(f.Message))
-// }
+func getNextID() int {
+	highestID := -1
+	for _, product := range productList {
+		if highestID < product.ProductID {
+			highestID = product.ProductID
+		}
+	}
+	return highestID + 1
+}
 
 func productsHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
@@ -28,6 +31,43 @@ func productsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-type", "application/json")
 		w.Write(productsJson)
+	case http.MethodPost:
+		var newProduct product.Product
+		bodyBytes, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			log.Println(err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		err = json.Unmarshal(bodyBytes, &newProduct)
+		if err != nil {
+			log.Println(err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		if newProduct.ProductID != 0 {
+			log.Println("ERROR: Product ID is not 0")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		newProduct.ProductID = getNextID()
+
+		productList = append(productList, newProduct)
+
+		jsonByte, err := json.Marshal(productList)
+		if err != nil {
+			log.Println(err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		w.WriteHeader(http.StatusCreated) // 201, placed before w.Write(jsonByte) not to overwrite by status 200
+		_, err = w.Write(jsonByte)
+		if err != nil {
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		return
 	}
 }
 
@@ -43,7 +83,7 @@ func init() {
 	"productName": "sticky note"
 },
 {
-	"productId": 12,
+	"productId": 2,
 	"manufacturer": "Hessel, Schimmel and Feeney",
 	"sku": "i7v300kmx",
 	"upc": "740979000000",

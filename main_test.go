@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -27,7 +28,7 @@ func TestHandler(t *testing.T) {
 	"productName":"sticky note"
 },
 {
-	"productId":12,
+	"productId":2,
 	"manufacturer":"Hessel, Schimmel and Feeney",
 	"sku":"i7v300kmx",
 	"upc":"740979000000",
@@ -45,7 +46,18 @@ func TestHandler(t *testing.T) {
 	"productName":"lamp shade"
 }
 ]`
-	t.Run("it should able to request for product list in json format", func(t *testing.T) {
+
+	newWantJSON := `
+{
+	"productId":4,
+	"manufacturer":"Small Box Company",
+	"sku":"4hs1j90JKL",
+	"upc":"42465000000",
+	"pricePerUnit":"9.99",
+	"quantityOnHand":18,
+	"productName":"Sprocket"
+}`
+	t.Run("it should be able to request for product list in json format", func(t *testing.T) {
 		request, err := newHandlerGetRequest("/products")
 		if err != nil {
 			t.Fatalf("error while creating request, %v", err)
@@ -62,7 +74,54 @@ func TestHandler(t *testing.T) {
 		assertStatusCode(t, httpResp.StatusCode, 200)
 		assertContentType(t, httpResp.ContentType, "application/json")
 		assertResponseJsonBody(t, httpResp.Body, wantJSON)
+	})
 
+	t.Run("it should able to post a product in json format", func(t *testing.T) {
+
+		postJSON := `
+{  
+	"manufacturer":"Small Box Company",
+	"sku":"4hs1j90JKL",
+	"upc":"42465000000",
+	"pricePerUnit":"9.99",
+	"quantityOnHand":18,
+	"productName":"Sprocket"
+}`
+		request, err := newHandlerPostRequestWithJson("/products", postJSON)
+		if err != nil {
+			t.Fatalf("error while posting a request, %v", err)
+		}
+		response := httptest.NewRecorder()
+
+		productsHandler(response, request)
+
+		httpResp, err := getHttpResponse(response)
+		if err != nil {
+			t.Fatalf("error from handler response, %v", err)
+		}
+
+		assertStatusCode(t, httpResp.StatusCode, 201)
+	})
+
+	t.Run("it should be able to add new product to product list", func(t *testing.T) {
+		request, err := newHandlerGetRequest("/products")
+		if err != nil {
+			t.Fatalf("error while creating request, %v", err)
+		}
+		response := httptest.NewRecorder()
+
+		productsHandler(response, request)
+
+		httpResp, err := getHttpResponse(response)
+		if err != nil {
+			t.Fatalf("error from handler response, %v", err)
+		}
+
+		assertStatusCode(t, httpResp.StatusCode, 200)
+		assertContentType(t, httpResp.ContentType, "application/json")
+		wantData := strings.ReplaceAll(strings.ReplaceAll(wantJSON, "[", ""), "]", ",") + newWantJSON
+		wantData = "[" + wantData + "]"
+		assertResponseJsonBody(t, httpResp.Body, wantData)
 	})
 
 }
@@ -74,20 +133,26 @@ func getHttpResponse(response *httptest.ResponseRecorder) (httpResponse, error) 
 	if err != nil {
 		return httpResponse, fmt.Errorf("error from response, %v", err)
 	}
+
 	httpResponse.Body = string(body)
 	httpResponse.StatusCode = resp.StatusCode
 	httpResponse.ContentType = resp.Header.Get("content-type")
 
 	return httpResponse, nil
 }
+
 func newHandlerGetRequest(url string) (*http.Request, error) {
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprint(url), nil)
 	return req, err
 }
+func newHandlerPostRequestWithJson(url string, data string) (*http.Request, error) {
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprint(url), bytes.NewBuffer([]byte(data)))
+	return req, err
+}
 
-func assertStatusCode(t *testing.T, statusCode, want int) {
-	if statusCode != want {
-		t.Errorf("Response status code should be '%d' not '%d'", want, statusCode)
+func assertStatusCode(t *testing.T, got, want int) {
+	if got != want {
+		t.Errorf("Response status code should be '%d' not '%d'", want, got)
 	}
 }
 
@@ -105,13 +170,10 @@ func assertResponseBody(t *testing.T, got, want string) {
 
 func assertResponseJsonBody(t *testing.T, got, want string) {
 
-	// if !reflect.DeepEqual(got, want) { //got != want {
-	// 	t.Errorf("Got response body  '%s' want '%s'", got, want)
-	// }
 	got = cleanString(got)
 	want = cleanString(want)
 	if got != want {
-		t.Errorf("Got response body  \n'%s' want \n'%s'", got, want)
+		t.Errorf("Got response body \n'%s' \nwant \n'%s'", got, want)
 	}
 }
 

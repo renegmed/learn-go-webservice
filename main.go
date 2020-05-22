@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 )
+
 type fooHandler struct {
 	Message string
 }

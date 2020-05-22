@@ -29,10 +29,9 @@ func TestServerHTTP(t *testing.T) {
 		t.Fatalf("error from handler response, %v", err)
 	}
 
-	if httpResp.StatusCode != 200 {
-		t.Errorf("Response status code should be '200' not '%d'", httpResp.StatusCode)
-	}
+	assertStatusCode(t, httpResp.StatusCode, 200)
 
+	assertResponseBody(t, httpResp.Body, fooHandler.Message)
 	if httpResp.Body != fooHandler.Message {
 		t.Errorf("Got response body  '%s' want '%s'", httpResp.Body, fooHandler.Message)
 	}
@@ -54,9 +53,7 @@ func TestGETHandler(t *testing.T) {
 		t.Fatalf("error from handler response, %v", err)
 	}
 
-	if httpResp.StatusCode != 200 {
-		t.Errorf("Response status code should be '200' not '%d'", httpResp.StatusCode)
-	}
+	assertStatusCode(t, httpResp.StatusCode, 200)
 
 	if httpResp.Body != want {
 		t.Errorf("Got response body  '%s' want '%s'", httpResp.Body, want)
@@ -79,4 +76,16 @@ func getHttpResponse(response *httptest.ResponseRecorder) (httpResponse, error) 
 func newHandlerRequest(url string) (*http.Request, error) {
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprint(url), nil)
 	return req, err
+}
+
+func assertStatusCode(t *testing.T, statusCode, want int) {
+	if statusCode != want {
+		t.Errorf("Response status code should be '%d' not '%d'", want, statusCode)
+	}
+}
+
+func assertResponseBody(t *testing.T, got, want string) {
+	if got != want {
+		t.Errorf("Got response body  '%s' want '%s'", got, want)
+	}
 }

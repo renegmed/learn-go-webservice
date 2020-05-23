@@ -59,19 +59,17 @@ const newWantJSON = `
 
 func TestHandler(t *testing.T) {
 	t.Run("it should be able to request for product list in json format", func(t *testing.T) {
+
 		request, err := newHandlerGetRequest("/products")
-		if err != nil {
-			t.Fatalf("error while creating request, %v", err)
-		}
+		assertNoError(t, err, "error while creating request,")
+
 		response := httptest.NewRecorder()
 
 		productsHandler(response, request)
 
 		httpResp, err := getHttpResponse(response)
-		if err != nil {
-			t.Fatalf("error from handler response, %v", err)
-		}
 
+		assertNoError(t, err, "error from handler response,")
 		assertStatusCode(t, httpResp.StatusCode, 200)
 		assertContentType(t, httpResp.ContentType, "application/json")
 		assertResponseJsonBody(t, httpResp.Body, wantJSON)
@@ -89,34 +87,27 @@ func TestHandler(t *testing.T) {
 	"productName":"Sprocket"
 }`
 		request, err := newHandlerPostRequestWithJson("/products", postJSON)
-		if err != nil {
-			t.Fatalf("error while posting a request, %v", err)
-		}
+		assertNoError(t, err, "error while posting a request,")
+
 		response := httptest.NewRecorder()
 
 		productsHandler(response, request)
 
 		httpResp, err := getHttpResponse(response)
-		if err != nil {
-			t.Fatalf("error from handler response, %v", err)
-		}
-
+		assertNoError(t, err, "error from handler response,")
 		assertStatusCode(t, httpResp.StatusCode, 201)
 	})
 
 	t.Run("to verify added product from the product list", func(t *testing.T) {
 		request, err := newHandlerGetRequest("/products")
-		if err != nil {
-			t.Fatalf("error while creating request, %v", err)
-		}
+		assertNoError(t, err, "error while creating request,")
+
 		response := httptest.NewRecorder()
 
 		productsHandler(response, request)
 
 		httpResp, err := getHttpResponse(response)
-		if err != nil {
-			t.Fatalf("error from handler response, %v", err)
-		}
+		assertNoError(t, err, "error from handler response, ")
 
 		assertStatusCode(t, httpResp.StatusCode, 200)
 		assertContentType(t, httpResp.ContentType, "application/json")
@@ -138,9 +129,8 @@ func TestHandler(t *testing.T) {
 		}`
 
 		request, err := newHandlerGetRequest("/products/2")
-		if err != nil {
-			t.Fatalf("error while requestin for a product, %v", err)
-		}
+		assertNoError(t, err, "error while requestin for a product,")
+
 		response := httptest.NewRecorder()
 
 		productHandler(response, request)
@@ -210,17 +200,14 @@ func TestHandler(t *testing.T) {
 		//log.Println("^^^^^^^ before delete:\n", beforeDeleteProductListJson)
 
 		request, err := newHandlerDeleteRequest("/products/4")
-		if err != nil {
-			t.Fatalf("error while requestin for a product, %v", err)
-		}
+		assertNoError(t, err, "error while requestin for a product,")
+
 		response := httptest.NewRecorder()
 
 		productHandler(response, request)
 
 		httpResp, err := getHttpResponse(response)
-		if err != nil {
-			t.Fatalf("error from handler response, %v", err)
-		}
+		assertNoError(t, err, "error from handler response,")
 
 		assertStatusCode(t, httpResp.StatusCode, 200)
 
@@ -285,6 +272,12 @@ func newHandlerPutRequestWithJson(url string, data string) (*http.Request, error
 func newHandlerDeleteRequest(url string) (*http.Request, error) {
 	req, err := http.NewRequest(http.MethodDelete, fmt.Sprint(url), nil)
 	return req, err
+}
+
+func assertNoError(t *testing.T, err error, message string) {
+	if err != nil {
+		t.Fatalf(message, err)
+	}
 }
 
 func assertStatusCode(t *testing.T, got, want int) {

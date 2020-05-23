@@ -16,8 +16,7 @@ type httpResponse struct {
 	ContentType string
 }
 
-func TestHandler(t *testing.T) {
-	wantJSON := `[
+const wantJSON = `[
 {
 	"productId":1,
 	"manufacturer":"Johns-Jenkins",
@@ -47,7 +46,7 @@ func TestHandler(t *testing.T) {
 }
 ]`
 
-	newWantJSON := `
+const newWantJSON = `
 {
 	"productId":4,
 	"manufacturer":"Small Box Company",
@@ -57,6 +56,8 @@ func TestHandler(t *testing.T) {
 	"quantityOnHand":18,
 	"productName":"Sprocket"
 }`
+
+func TestHandler(t *testing.T) {
 	t.Run("it should be able to request for product list in json format", func(t *testing.T) {
 		request, err := newHandlerGetRequest("/products")
 		if err != nil {
@@ -103,7 +104,7 @@ func TestHandler(t *testing.T) {
 		assertStatusCode(t, httpResp.StatusCode, 201)
 	})
 
-	t.Run("it should be able to add new product to product list", func(t *testing.T) {
+	t.Run("to verify added product from the product list", func(t *testing.T) {
 		request, err := newHandlerGetRequest("/products")
 		if err != nil {
 			t.Fatalf("error while creating request, %v", err)
@@ -159,16 +160,16 @@ func TestHandler(t *testing.T) {
 
 	// 	modifiedProductJSON := `
 	// 	{
-	// 		"productId":3,
-	// 		"manufacturer":"Swaniawski, Bartoletti and Bruen",
-	// 		"sku":"q0L657ys7",
-	// 		"upc":"11173000000",
-	// 		"pricePerUnit":"436.26",
-	// 		"quantityOnHand":5800,
-	// 		"productName":"lamp shade"
+	// 	"productId":4,
+	// 	"manufacturer":"Small Box Company",
+	// 	"sku":"4hs1j90JKL",
+	// 	"upc":"42465000000",
+	// 	"pricePerUnit":"9.99",
+	// 	"quantityOnHand":215,
+	// 	"productName":"Sprocket"
 	// 	}`
 
-	// 	request, err := newHandlerPutRequestWithJson("/products/3", modifiedProductJSON)
+	// 	request, err := newHandlerPutRequestWithJson("/products/4", modifiedProductJSON)
 	// 	if err != nil {
 	// 		t.Fatalf("error on product update request, %v", err)
 	// 	}
@@ -185,7 +186,7 @@ func TestHandler(t *testing.T) {
 
 	// 	// verify the product updates
 
-	// 	request, err = newHandlerGetRequest("/products/3")
+	// 	request, err = newHandlerGetRequest("/products/4")
 	// 	if err != nil {
 	// 		t.Fatalf("error while requesting for a product, %v", err)
 	// 	}
@@ -202,6 +203,54 @@ func TestHandler(t *testing.T) {
 	// 	assertContentType(t, httpResp.ContentType, "application/json")
 	// 	assertResponseJsonBody(t, httpResp.Body, modifiedProductJSON)
 	// })
+
+	t.Run("it should be able to DELETE a product", func(t *testing.T) {
+
+		//beforeDeleteProductListJson := getProductList(t)
+		//log.Println("^^^^^^^ before delete:\n", beforeDeleteProductListJson)
+
+		request, err := newHandlerDeleteRequest("/products/4")
+		if err != nil {
+			t.Fatalf("error while requestin for a product, %v", err)
+		}
+		response := httptest.NewRecorder()
+
+		productHandler(response, request)
+
+		httpResp, err := getHttpResponse(response)
+		if err != nil {
+			t.Fatalf("error from handler response, %v", err)
+		}
+
+		assertStatusCode(t, httpResp.StatusCode, 200)
+
+		// Verify
+
+		afterDeleteProductListJson := getProductList(t)
+		// log.Println("^^^^^^^ after delete:\n", afterDeleteProductListJson)
+		assertResponseJsonBody(t, afterDeleteProductListJson, wantJSON)
+	})
+
+}
+
+func getProductList(t *testing.T) string {
+	request, err := newHandlerGetRequest("/products")
+	if err != nil {
+		t.Fatalf("error while creating request, %v", err)
+	}
+	response := httptest.NewRecorder()
+
+	productsHandler(response, request)
+
+	httpResp, err := getHttpResponse(response)
+	if err != nil {
+		t.Fatalf("error from handler response, %v", err)
+	}
+
+	assertStatusCode(t, httpResp.StatusCode, 200)
+	assertResponseJsonBody(t, httpResp.Body, wantJSON)
+
+	return httpResp.Body
 }
 
 func getHttpResponse(response *httptest.ResponseRecorder) (httpResponse, error) {
@@ -230,6 +279,11 @@ func newHandlerPostRequestWithJson(url string, data string) (*http.Request, erro
 
 func newHandlerPutRequestWithJson(url string, data string) (*http.Request, error) {
 	req, err := http.NewRequest(http.MethodPut, fmt.Sprint(url), bytes.NewBuffer([]byte(data)))
+	return req, err
+}
+
+func newHandlerDeleteRequest(url string) (*http.Request, error) {
+	req, err := http.NewRequest(http.MethodDelete, fmt.Sprint(url), nil)
 	return req, err
 }
 

@@ -32,6 +32,19 @@ func findProductByID(productID int) (*product.Product, int) {
 	return nil, 0
 }
 
+func deleteProductByID(productID int) int {
+	var count int
+	pl := []product.Product{}
+	for _, p := range productList {
+		if p.ProductID != productID {
+			pl = append(pl, p)
+		} else {
+			count++
+		}
+	}
+	productList = pl
+	return count
+}
 func productHandler(w http.ResponseWriter, r *http.Request) {
 	urlPathSegments := strings.Split(r.URL.Path, "products/")
 	productID, err := strconv.Atoi(urlPathSegments[len(urlPathSegments)-1]) // get the last part of array
@@ -76,9 +89,12 @@ func productHandler(w http.ResponseWriter, r *http.Request) {
 
 		product = updatedProduct
 
-		log.Println("^^^^^ product:\n", product)
-
 		productList[listItemIndex] = *product
+		w.WriteHeader(http.StatusOK)
+		return
+
+	case http.MethodDelete:
+		deleteProductByID(productID)
 		w.WriteHeader(http.StatusOK)
 		return
 	}

@@ -124,7 +124,7 @@ func TestHandler(t *testing.T) {
 		assertResponseJsonBody(t, httpResp.Body, wantData)
 	})
 
-	t.Run("it should be able to request a particualar product using product id", func(t *testing.T) {
+	t.Run("it should be able to request a particular product using product id", func(t *testing.T) {
 		wantProductJSON := `
 		{
 			"productId":2,
@@ -138,7 +138,7 @@ func TestHandler(t *testing.T) {
 
 		request, err := newHandlerGetRequest("/products/2")
 		if err != nil {
-			t.Fatalf("error while creating request, %v", err)
+			t.Fatalf("error while requestin for a product, %v", err)
 		}
 		response := httptest.NewRecorder()
 
@@ -155,6 +155,53 @@ func TestHandler(t *testing.T) {
 		assertResponseJsonBody(t, httpResp.Body, wantProductJSON)
 	})
 
+	// t.Run("it should be able to update an existing product using PUT method", func(t *testing.T) {
+
+	// 	modifiedProductJSON := `
+	// 	{
+	// 		"productId":3,
+	// 		"manufacturer":"Swaniawski, Bartoletti and Bruen",
+	// 		"sku":"q0L657ys7",
+	// 		"upc":"11173000000",
+	// 		"pricePerUnit":"436.26",
+	// 		"quantityOnHand":5800,
+	// 		"productName":"lamp shade"
+	// 	}`
+
+	// 	request, err := newHandlerPutRequestWithJson("/products/3", modifiedProductJSON)
+	// 	if err != nil {
+	// 		t.Fatalf("error on product update request, %v", err)
+	// 	}
+	// 	response := httptest.NewRecorder()
+
+	// 	productsHandler(response, request)
+
+	// 	httpResp, err := getHttpResponse(response)
+	// 	if err != nil {
+	// 		t.Fatalf("error from handler response, %v", err)
+	// 	}
+
+	// 	assertStatusCode(t, httpResp.StatusCode, 200)
+
+	// 	// verify the product updates
+
+	// 	request, err = newHandlerGetRequest("/products/3")
+	// 	if err != nil {
+	// 		t.Fatalf("error while requesting for a product, %v", err)
+	// 	}
+	// 	response = httptest.NewRecorder()
+
+	// 	productHandler(response, request)
+
+	// 	httpResp, err = getHttpResponse(response)
+	// 	if err != nil {
+	// 		t.Fatalf("error from handler response, %v", err)
+	// 	}
+
+	// 	assertStatusCode(t, httpResp.StatusCode, 200)
+	// 	assertContentType(t, httpResp.ContentType, "application/json")
+	// 	assertResponseJsonBody(t, httpResp.Body, modifiedProductJSON)
+	// })
 }
 
 func getHttpResponse(response *httptest.ResponseRecorder) (httpResponse, error) {
@@ -178,6 +225,11 @@ func newHandlerGetRequest(url string) (*http.Request, error) {
 }
 func newHandlerPostRequestWithJson(url string, data string) (*http.Request, error) {
 	req, err := http.NewRequest(http.MethodPost, fmt.Sprint(url), bytes.NewBuffer([]byte(data)))
+	return req, err
+}
+
+func newHandlerPutRequestWithJson(url string, data string) (*http.Request, error) {
+	req, err := http.NewRequest(http.MethodPut, fmt.Sprint(url), bytes.NewBuffer([]byte(data)))
 	return req, err
 }
 

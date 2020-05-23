@@ -53,20 +53,8 @@ func productsHandler(w http.ResponseWriter, r *http.Request) {
 		newProduct.ProductID = getNextID()
 
 		productList = append(productList, newProduct)
+		w.WriteHeader(http.StatusCreated) // 201
 
-		jsonByte, err := json.Marshal(productList)
-		if err != nil {
-			log.Println(err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-
-		w.WriteHeader(http.StatusCreated) // 201, placed before w.Write(jsonByte) not to overwrite by status 200
-		_, err = w.Write(jsonByte)
-		if err != nil {
-			log.Println(err)
-			w.WriteHeader(http.StatusInternalServerError)
-		}
 		return
 	}
 }

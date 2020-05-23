@@ -124,6 +124,37 @@ func TestHandler(t *testing.T) {
 		assertResponseJsonBody(t, httpResp.Body, wantData)
 	})
 
+	t.Run("it should be able to request a particualar product using product id", func(t *testing.T) {
+		wantProductJSON := `
+		{
+			"productId":2,
+			"manufacturer":"Hessel, Schimmel and Feeney",
+			"sku":"i7v300kmx",
+			"upc":"740979000000",
+			"pricePerUnit":"282.29",
+			"quantityOnHand":9217,
+			"productName":"leg warmers"
+		}`
+
+		request, err := newHandlerGetRequest("/products/2")
+		if err != nil {
+			t.Fatalf("error while creating request, %v", err)
+		}
+		response := httptest.NewRecorder()
+
+		productHandler(response, request)
+
+		httpResp, err := getHttpResponse(response)
+		if err != nil {
+			t.Fatalf("error from handler response, %v", err)
+		}
+
+		assertStatusCode(t, httpResp.StatusCode, 200)
+		assertContentType(t, httpResp.ContentType, "application/json")
+
+		assertResponseJsonBody(t, httpResp.Body, wantProductJSON)
+	})
+
 }
 
 func getHttpResponse(response *httptest.ResponseRecorder) (httpResponse, error) {

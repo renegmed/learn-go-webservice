@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/renegmed/inventoryservice/product"
 )
@@ -19,6 +21,42 @@ func getNextID() int {
 		}
 	}
 	return highestID + 1
+}
+
+func findProductByID(productID int) (*product.Product, int) {
+	for i, product := range productList {
+		if product.ProductID == productID {
+			return &product, i
+		}
+	}
+	return nil, 0
+}
+
+func productHandler(w http.ResponseWriter, r *http.Request) {
+	urlPathSegments := strings.Split(r.URL.Path, "products/")
+	productID, err := strconv.Atoi(urlPathSegments[len(urlPathSegments)-1]) // get the last part of array
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	product, _ := findProductByID(productID)
+	if product == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		// return a single product
+		byteProductJSON, err := json.Marshal(product)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(byteProductJSON)
+	}
 }
 
 func productsHandler(w http.ResponseWriter, r *http.Request) {
@@ -96,5 +134,6 @@ func init() {
 }
 func main() {
 	http.HandleFunc("/products", productsHandler)
+	http.HandleFunc("/products/", productHandler)
 	http.ListenAndServe(":5000", nil)
 }

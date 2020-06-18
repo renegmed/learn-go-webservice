@@ -217,7 +217,28 @@ func TestHandler(t *testing.T) {
 		// log.Println("^^^^^^^ after delete:\n", afterDeleteProductListJson)
 		assertResponseJsonBody(t, afterDeleteProductListJson, wantJSON)
 	})
+}
 
+func TestMiddleware(t *testing.T) {
+	t.Run("middleware should be able to get product list", func(t *testing.T) {
+
+		request, err := newHandlerGetRequest("/products")
+		assertNoError(t, err, "error while creating request,")
+
+		response := httptest.NewRecorder()
+
+		//var productsHandler = productsHandler(response, request)
+
+		productsHandlerFunc := http.HandlerFunc(productsHandler)
+		middlewareHandler(productsHandlerFunc)
+
+		httpResp, err := getHttpResponse(response)
+
+		assertNoError(t, err, "error from handler response,")
+		assertStatusCode(t, httpResp.StatusCode, 200)
+		assertContentType(t, httpResp.ContentType, "application/json")
+		assertResponseJsonBody(t, httpResp.Body, wantJSON)
+	})
 }
 
 func getProductList(t *testing.T) string {

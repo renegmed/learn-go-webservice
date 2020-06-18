@@ -2,11 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/renegmed/inventoryservice/product"
 )
@@ -58,6 +60,7 @@ func productHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("List Item Index:\t%v\nProduct:\n\t%v\n", listItemIndex, product)
 	switch r.Method {
 	case http.MethodGet:
 		// return a single product
@@ -90,6 +93,9 @@ func productHandler(w http.ResponseWriter, r *http.Request) {
 		product = updatedProduct
 
 		productList[listItemIndex] = *product
+
+		log.Printf("Updated Product:\n\t%v\n", productList[listItemIndex])
+
 		w.WriteHeader(http.StatusOK)
 		return
 
@@ -97,6 +103,8 @@ func productHandler(w http.ResponseWriter, r *http.Request) {
 		deleteProductByID(productID)
 		w.WriteHeader(http.StatusOK)
 		return
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
 }
 
@@ -173,8 +181,21 @@ func init() {
 		log.Fatal(err)
 	}
 }
+
+func middlewareHandler(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		start := time.Now()
+		log.Printf("before handler; middleware start, %v\n", start)
+		handler.ServeHTTP(w, r)
+		fmt.Printf("middleware finished; %s", time.Since(start))
+	})
+}
 func main() {
-	http.HandleFunc("/products", productsHandler)
-	http.HandleFunc("/products/", productHandler)
+	productListHandler := http.HandlerFunc(productsHandler)
+	productItemHandler := http.HandlerFunc(productHandler)
+	http.Handle("/products", middlewareHandler(productListHandler))
+	http.Handle("/products/", middlewareHandler(productItemHandler))
+	log.Println("Server started on port 5000...")
 	http.ListenAndServe(":5000", nil)
 }

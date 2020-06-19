@@ -2,8 +2,9 @@ package receipt
 
 /*
 	upload file
+	send file
+	download file
 	receive file
-
 */
 import (
 	"io/ioutil"

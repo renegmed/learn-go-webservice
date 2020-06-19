@@ -3,7 +3,6 @@ package product
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
@@ -28,59 +27,64 @@ func productHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	product := getProduct(productID)
-	if product == nil {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
 
-	log.Printf("productHandler: Method: %v \nProduct:\n\t%v", r.Method, *product)
+	log.Printf("productHandler: Method: %v", r.Method)
 
 	switch r.Method {
 	case http.MethodGet:
-		// return a single product
-		byteProductJSON, err := json.Marshal(product)
+		product, err := getProduct(productID)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		w.Header().Set("Content-type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write(byteProductJSON)
+		if product == nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		j, err := json.Marshal(product)
+		if err != nil {
+			log.Print(err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		_, err = w.Write(j)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 	case http.MethodPut:
-		// update product in the list
-
-		updatedProduct := product
-
-		log.Println("Updating product:\n\t", updatedProduct)
-
-		bodyBytes, err := ioutil.ReadAll(r.Body)
+		var product Product
+		err := json.NewDecoder(r.Body).Decode(&product)
 		if err != nil {
+			log.Print(err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		err = json.Unmarshal(bodyBytes, &updatedProduct)
+		if *product.ProductID != productID {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		err = updateProduct(product)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		if updatedProduct.ProductID != productID {
+			log.Print(err)
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		_, err = addOrUpdateProduct(*updatedProduct)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
+		log.Println("Product updated:\n\t", product)
 
-		log.Println("Product was updated...")
 		w.WriteHeader(http.StatusOK)
 		return
 
 	case http.MethodDelete:
-		removeProduct(productID)
+		err := removeProduct(productID)
+		if err != nil {
+			log.Print(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		log.Println("Product deleted:", productID)
+
 		w.WriteHeader(http.StatusOK)
 		return
 
@@ -93,9 +97,15 @@ func productHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func productsHandler(w http.ResponseWriter, r *http.Request) {
+
+	log.Printf("productsHandler: Method: %v", r.Method)
 	switch r.Method {
 	case http.MethodGet:
-		productList := getProductList()
+		productList, err := getProductList()
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		productsJson, err := json.Marshal(productList)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -103,68 +113,29 @@ func productsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-type", "application/json")
 		w.Write(productsJson)
-	case http.MethodPost:
-		var newProduct Product
-		bodyBytes, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			log.Println(err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		err = json.Unmarshal(bodyBytes, &newProduct)
-		if err != nil {
-			log.Println(err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		if newProduct.ProductID != 0 {
-			log.Println("ERROR: Product ID is not 0")
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		_, err = addOrUpdateProduct(newProduct)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		w.WriteHeader(http.StatusCreated) // 201
-		return
 
+	case http.MethodPost:
+		var product Product
+		err := json.NewDecoder(r.Body).Decode(&product)
+		if err != nil {
+			log.Print(err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		productID, err := insertProduct(product)
+		if err != nil {
+			log.Print(err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		log.Println("Produce inserted: \n\t", product)
+
+		w.WriteHeader(http.StatusCreated)
+		w.Write([]byte(fmt.Sprintf(`{"productId":%d}`, productID)))
+	case http.MethodOptions:
+		return
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
 }
-
-// func init() {
-// 	productsJSON := `[
-// {
-// 	"productId": 1,
-// 	"manufacturer": "Johns-Jenkins",
-// 	"sku": "p5z34vdS",
-// 	"upc": "939581000000",
-// 	"pricePerUnit": "497.45",
-// 	"quantityOnHand": 9703,
-// 	"productName": "sticky note"
-// },
-// {
-// 	"productId": 2,
-// 	"manufacturer": "Hessel, Schimmel and Feeney",
-// 	"sku": "i7v300kmx",
-// 	"upc": "740979000000",
-// 	"pricePerUnit": "282.29",
-// 	"quantityOnHand": 9217,
-// 	"productName": "leg warmers"
-// },
-// {
-// 	"productId": 3,
-// 	"manufacturer": "Swaniawski, Bartoletti and Bruen",
-// 	"sku": "q0L657ys7",
-// 	"upc": "11173000000",
-// 	"pricePerUnit": "436.26",
-// 	"quantityOnHand": 5905,
-// 	"productName": "lamp shade"
-// }
-// ]`
-// 	err := json.Unmarshal([]byte(productsJSON), &productList)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// }

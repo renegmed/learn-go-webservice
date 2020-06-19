@@ -4,12 +4,16 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/renegmed/inventoryservice/database"
+
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/renegmed/inventoryservice/product"
 )
 
 const apiBasePath = "/api"
 
 func main() {
+	database.SetupDatabase()
 	product.SetupRoutes(apiBasePath)
 	log.Println("Server started on port 5000...")
 	err := http.ListenAndServe(":5000", nil)

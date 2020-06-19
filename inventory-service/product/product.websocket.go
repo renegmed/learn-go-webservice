@@ -14,7 +14,15 @@ type message struct {
 }
 
 func productSocket(ws *websocket.Conn) {
+	// we can verify that the origin is an allowed origin
+	fmt.Printf("origin: %s\n", ws.Config().Origin)
+
+	defer ws.Close()
+
+	done := make(chan struct{})
+
 	go func(c *websocket.Conn) {
+		defer close(done)
 		for {
 			var msg message
 			if err := websocket.JSON.Receive(ws, &msg); err != nil {
@@ -24,25 +32,28 @@ func productSocket(ws *websocket.Conn) {
 			fmt.Printf("received message %s\n", msg.Data)
 		}
 	}(ws)
-
+loop:
 	for {
-		products, err := GetTopTenProducts()
-		if err != nil {
-			log.Fatal(err)
+		select {
+		case <-done:
+			log.Println("connection was closed, lets break out of here.")
+			break loop
+		default:
+			log.Println("sending top 10 products list to the client.")
+			products, err := GetTopTenProducts()
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			if err := websocket.JSON.Send(ws, products); err != nil {
+				log.Println(err)
+				break
+			}
+
+			// pause for 10 seconds before sending again
+			time.Sleep(10 * time.Second)
 		}
 
-		if err := websocket.JSON.Send(ws, products); err != nil {
-			log.Println(err)
-			break
-		}
-
-		// pause for 10 seconds before sending again
-		time.Sleep(10 * time.Second)
-		/*
-			websocket has not properly closed when the browser is terminated
-			thus we are getting console error when the next reading comes
-				2020/06/19 16:59:29 EOF
-				2020/06/19 16:59:49 write tcp [::1]:5000->[::1]:44712: write: broken pipe
-		*/
 	}
+	fmt.Println("closing the connection")
 }

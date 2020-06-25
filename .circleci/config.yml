@@ -43,4 +43,4 @@ jobs:
 
         - run:
             name: Do Test 
-            command: make test 
+            command: cd inventory-service && make test 

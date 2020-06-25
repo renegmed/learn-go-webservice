@@ -1,5 +1,5 @@
 init-project:
-	go mod init github.com/renegmed/inventoryservice
+	go mod init github.com/renegmed/learn-go-webservice/inventoryservice
 .PHONY: init-project
 
 test:

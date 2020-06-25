@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/renegmed/inventoryservice/database"
+	"github.com/renegmed/learn-go-webservice/inventoryservice/database"
 
 	_ "github.com/go-sql-driver/mysql"
 )

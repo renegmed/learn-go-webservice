@@ -4,12 +4,12 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/renegmed/inventoryservice/receipt"
+	"github.com/renegmed/learn-go-webservice/inventoryservice/receipt"
 
-	"github.com/renegmed/inventoryservice/database"
+	"github.com/renegmed/learn-go-webservice/inventoryservice/database"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/renegmed/inventoryservice/product"
+	"github.com/renegmed/learn-go-webservice/inventoryservice/product"
 )
 
 const apiBasePath = "/api"

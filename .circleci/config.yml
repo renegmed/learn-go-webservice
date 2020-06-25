@@ -1,0 +1,46 @@
+version: 2.0
+
+workflows:
+    version: 2
+    build_and_test:
+        jobs:
+            - build
+            - test:
+                requires:
+                  - build
+                filters:
+                  branches:
+                    only: circleci
+jobs:
+  build:
+    docker:
+      - image: cimg/go:1.14.4
+    working_directory: /go/src/github.com/renegmed/inventoryservice
+    steps:
+        - checkout 
+        - run: 
+            name: Install Docker Compose 
+            command: | 
+              set -x curl -L https://github.com/docker/compose/releases/download/1.25.3/docker-compose-`uname -s`-`uname -m` > sudo /usr/local/bin/docker-compose chmod +x /usr/local/bin/docker-compose
+        
+        # activate Remote Docker Environment
+        - setup_remote_docker        
+
+        - run:
+            name: Start createing images and containers
+            command: docker-compose up --build -d 
+
+        - run:
+            name: Set GOROOT
+            command: export GOROOT="/usr/local/go"    
+        - run:
+            name: Inquire container status, GOPATH and GOROOT
+            command: docker ps -a && echo $GOPATH  && echo $GOROOT
+
+        - run:
+            name: Inquire GOPATH and add to PATH
+            command: echo $GOPATH && export PATH="$PATH:$GOROOT/bin"
+
+        - run:
+            name: Do Test 
+            command: make test 

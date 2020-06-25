@@ -17,6 +17,9 @@ jobs:
         # - image: circleci/golang:1.14.4
     #working_directory: /go/src/github.com/renegmed/learn-go-webservice/inventoryservice
     steps:
+
+        - checkout 
+
         - run: 
             name: Install latest go 
             command: |
@@ -27,13 +30,13 @@ jobs:
                 go version
 
         - run: 
-            name: Create and go to work directory 
+            name: Create work directory, move source code to work directory, then go to work directory 
             command: | 
-              mkdir -p /home/circleci/.go_workspace/src/github.com/renegmed/learn-go-webservice 
+              mkdir -p /home/circleci/.go_workspace/src/github.com/renegmed             
+              mv /home/circleci/project /home/circleci/learn-go-webservice
+              mv /home/circleci/learn-go-webservice /home/circleci/.go_workspace/src/github.com/renegmed
               cd /home/circleci/.go_workspace/src/github.com/renegmed/learn-go-webservice
-
-        - checkout 
-        
+               
         # activate Remote Docker Environment
         # - setup_remote_docker      
         # - run: 

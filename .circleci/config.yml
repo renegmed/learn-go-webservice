@@ -13,20 +13,30 @@ workflows:
                     only: circleci
 jobs:
   build:
-    machine:
-      - image: ubuntu-1604:202004-01  #circleci/golang:1.14.4
+    docker: 
       - image: circleci/golang:1.14.4
     working_directory: /go/src/github.com/renegmed/learn-go-webservice/inventoryservice
     steps:
         - checkout 
         
         # activate Remote Docker Environment
-        # - setup_remote_docker      
-        # - run: 
-        #     name: Install Docker Compose 
-        #     command: | 
-        #       set -x curl -L https://github.com/docker/compose/releases/download/1.25.3/docker-compose-`uname -s`-`uname -m` > sudo /usr/local/bin/docker-compose chmod +x /usr/local/bin/docker-compose
-               
+        - setup_remote_docker      
+        - run: 
+            name: Install Docker Compose 
+            command: | 
+              set -x curl -L https://github.com/docker/compose/releases/download/1.25.3/docker-compose-`uname -s`-`uname -m` > sudo /usr/local/bin/docker-compose chmod +x /usr/local/bin/docker-compose
+       
+        - run: |
+            # create a dummy container which will hold a volume with config
+            docker create -v /mysql --name data alpine:3.4 /bin/true
+            # copy a config file into this volume
+            #docker cp /go/src/github.com/renegmed/learn-go-webservice/inventoryservice/app_config.yml configs:/cfg
+            # start an application container using this volume
+            docker run --volumes-from data mysql
+            docker create -v /docker-entrypoint-initdb.d --name sql alpine:3.4 /bin/true
+            docker cp /go/src/github.com/renegmed/learn-go-webservice/inventoryservice/sqlscripts sql:/docker-entrypoint-initdb.d
+            docker run --volumes-from sql mysql
+
         - run:
             name: Start creating images and containers
             command: docker-compose up --build -d 

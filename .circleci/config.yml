@@ -14,8 +14,8 @@ workflows:
 jobs:
   build:
     docker:
-      - image: cimg/go:1.14.4
-    working_directory: /go/src/github.com/renegmed/inventoryservice
+      - image: circleci/golang:1.14.4
+    working_directory: /go/src/github.com/renegmed/learn-go-webservice/inventoryservice
     steps:
         - checkout 
         - run: 

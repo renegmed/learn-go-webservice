@@ -25,7 +25,7 @@ type httpResponse struct {
 }
 
 func removeAllProducts() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	_, err := database.DbConn.ExecContext(ctx, `DELETE FROM products`)
 	if err != nil {

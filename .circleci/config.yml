@@ -15,8 +15,23 @@ jobs:
   build:
     machine: true 
         # - image: circleci/golang:1.14.4
-    # working_directory: /go/src/github.com/renegmed/learn-go-webservice/inventoryservice
+    #working_directory: /go/src/github.com/renegmed/learn-go-webservice/inventoryservice
     steps:
+        - run: 
+            name: Install latest go 
+            command: |
+                wget https://dl.google.com/go/go1.14.1.linux-amd64.tar.gz
+                sudo tar -xvf go1.14.1.linux-amd64.tar.gz
+                sudo rm /usr/local/go 
+                sudo mv go /usr/local
+                go version
+
+        - run: 
+            name: Create and go to work directory 
+            command: | 
+              mkdir -p /home/circleci/.go_workspace/src/github.com/renegmed/learn-go-webservice 
+              cd /home/circleci/.go_workspace/src/github.com/renegmed/learn-go-webservice
+
         - checkout 
         
         # activate Remote Docker Environment

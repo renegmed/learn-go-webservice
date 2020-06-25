@@ -3,6 +3,6 @@ init-project:
 .PHONY: init-project
 
 test:
-	go test . -v -race
+	go test product/*.go -v --race
 .PHONY: test 
 

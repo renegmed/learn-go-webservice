@@ -1,13 +1,21 @@
-package main
+package product
 
 import (
 	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/renegmed/inventoryservice/database"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 type httpResponse struct {
@@ -16,49 +24,28 @@ type httpResponse struct {
 	ContentType string
 }
 
-const wantJSON = `[
-{
-	"productId":1,
-	"manufacturer":"Johns-Jenkins",
-	"sku":"p5z34vdS",
-	"upc":"939581000000",
-	"pricePerUnit":"497.45",
-	"quantityOnHand":9703,
-	"productName":"sticky note"
-},
-{
-	"productId":2,
-	"manufacturer":"Hessel, Schimmel and Feeney",
-	"sku":"i7v300kmx",
-	"upc":"740979000000",
-	"pricePerUnit":"282.29",
-	"quantityOnHand":9217,
-	"productName":"leg warmers"
-},
-{
-	"productId":3,
-	"manufacturer":"Swaniawski, Bartoletti and Bruen",
-	"sku":"q0L657ys7",
-	"upc":"11173000000",
-	"pricePerUnit":"436.26",
-	"quantityOnHand":5905,
-	"productName":"lamp shade"
+func removeAllProducts() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	_, err := database.DbConn.ExecContext(ctx, `DELETE FROM products`)
+	if err != nil {
+		log.Println(err.Error())
+		return err
+	}
+	return nil
 }
-]`
-
-const newWantJSON = `
-{
-	"productId":4,
-	"manufacturer":"Small Box Company",
-	"sku":"4hs1j90JKL",
-	"upc":"42465000000",
-	"pricePerUnit":"9.99",
-	"quantityOnHand":18,
-	"productName":"Sprocket"
-}`
 
 func TestHandler(t *testing.T) {
-	t.Run("it should be able to request for product list in json format", func(t *testing.T) {
+
+	database.SetupDatabase()
+	err := removeAllProducts()
+	if err != nil {
+		assertNoError(t, err, "error from database deleting all products,")
+	}
+
+	t.Run("it should be able to request for empty product list", func(t *testing.T) {
+
+		wantJSON := `[]`
 
 		request, err := newHandlerGetRequest("/products")
 		assertNoError(t, err, "error while creating request,")
@@ -111,24 +98,37 @@ func TestHandler(t *testing.T) {
 
 		assertStatusCode(t, httpResp.StatusCode, 200)
 		assertContentType(t, httpResp.ContentType, "application/json")
-		wantData := strings.ReplaceAll(strings.ReplaceAll(wantJSON, "[", ""), "]", ",") + newWantJSON
-		wantData = "[" + wantData + "]"
-		assertResponseJsonBody(t, httpResp.Body, wantData)
+
+		var products []Product
+
+		err = json.Unmarshal([]byte(httpResp.Body), &products)
+		if err != nil {
+
+			assertNoError(t, fmt.Errorf("Error on unmarshalling products"), "")
+			t.Fail()
+		}
+		if len(products) != 1 {
+			assertNoError(t, fmt.Errorf("Product list should have only 1 product not %d.", len(products)), "")
+			t.Fail()
+		}
+		product := products[0]
+		if product.Manufacturer != "Small Box Company" {
+			assertNoError(t, fmt.Errorf("Product manufacturer should be '%s' not '%s'", "Small Box Company", product.Manufacturer), "")
+			t.Fail()
+		}
+
+		if product.PricePerUnit != fmt.Sprintf("%.2f", 9.99) {
+			assertNoError(t, fmt.Errorf("Product price per unit %s not %s", fmt.Sprintf("%.2f", 9.99), product.PricePerUnit), "")
+			t.Fail()
+		}
 	})
 
 	t.Run("it should be able to request a particular product using product id", func(t *testing.T) {
-		wantProductJSON := `
-		{
-			"productId":2,
-			"manufacturer":"Hessel, Schimmel and Feeney",
-			"sku":"i7v300kmx",
-			"upc":"740979000000",
-			"pricePerUnit":"282.29",
-			"quantityOnHand":9217,
-			"productName":"leg warmers"
-		}`
+		product := getFirstProduct(t)
 
-		request, err := newHandlerGetRequest("/products/2")
+		log.Println("product.ProductID:", *product.ProductID)
+
+		request, err := newHandlerGetRequest("/products/" + fmt.Sprintf("%d", *product.ProductID))
 		assertNoError(t, err, "error while requestin for a product,")
 
 		response := httptest.NewRecorder()
@@ -143,63 +143,24 @@ func TestHandler(t *testing.T) {
 		assertStatusCode(t, httpResp.StatusCode, 200)
 		assertContentType(t, httpResp.ContentType, "application/json")
 
-		assertResponseJsonBody(t, httpResp.Body, wantProductJSON)
+		var prod Product
+		err = json.Unmarshal([]byte(httpResp.Body), &prod)
+		if err != nil {
+			assertNoError(t, fmt.Errorf("Error on unmarshalling product"), "")
+			t.Fail()
+		}
+
+		if *product.ProductID != *prod.ProductID {
+			assertNoError(t, fmt.Errorf("Product ID should be %s not %s", fmt.Sprintf("%d", product.ProductID), fmt.Sprintf("%d", prod.ProductID)), "")
+			t.Fail()
+		}
+
 	})
 
-	// t.Run("it should be able to update an existing product using PUT method", func(t *testing.T) {
-
-	// 	modifiedProductJSON := `
-	// 	{
-	// 	"productId":4,
-	// 	"manufacturer":"Small Box Company",
-	// 	"sku":"4hs1j90JKL",
-	// 	"upc":"42465000000",
-	// 	"pricePerUnit":"9.99",
-	// 	"quantityOnHand":215,
-	// 	"productName":"Sprocket"
-	// 	}`
-
-	// 	request, err := newHandlerPutRequestWithJson("/products/4", modifiedProductJSON)
-	// 	if err != nil {
-	// 		t.Fatalf("error on product update request, %v", err)
-	// 	}
-	// 	response := httptest.NewRecorder()
-
-	// 	productsHandler(response, request)
-
-	// 	httpResp, err := getHttpResponse(response)
-	// 	if err != nil {
-	// 		t.Fatalf("error from handler response, %v", err)
-	// 	}
-
-	// 	assertStatusCode(t, httpResp.StatusCode, 200)
-
-	// 	// verify the product updates
-
-	// 	request, err = newHandlerGetRequest("/products/4")
-	// 	if err != nil {
-	// 		t.Fatalf("error while requesting for a product, %v", err)
-	// 	}
-	// 	response = httptest.NewRecorder()
-
-	// 	productHandler(response, request)
-
-	// 	httpResp, err = getHttpResponse(response)
-	// 	if err != nil {
-	// 		t.Fatalf("error from handler response, %v", err)
-	// 	}
-
-	// 	assertStatusCode(t, httpResp.StatusCode, 200)
-	// 	assertContentType(t, httpResp.ContentType, "application/json")
-	// 	assertResponseJsonBody(t, httpResp.Body, modifiedProductJSON)
-	// })
-
 	t.Run("it should be able to DELETE a product", func(t *testing.T) {
+		product := getFirstProduct(t)
 
-		//beforeDeleteProductListJson := getProductList(t)
-		//log.Println("^^^^^^^ before delete:\n", beforeDeleteProductListJson)
-
-		request, err := newHandlerDeleteRequest("/products/4")
+		request, err := newHandlerDeleteRequest("/products/" + fmt.Sprintf("%d", *product.ProductID))
 		assertNoError(t, err, "error while requestin for a product,")
 
 		response := httptest.NewRecorder()
@@ -213,35 +174,43 @@ func TestHandler(t *testing.T) {
 
 		// Verify
 
-		afterDeleteProductListJson := getProductList(t)
-		// log.Println("^^^^^^^ after delete:\n", afterDeleteProductListJson)
-		assertResponseJsonBody(t, afterDeleteProductListJson, wantJSON)
+		afterDeleteProductListJson := productList(t)
+
+		assertResponseJsonBody(t, afterDeleteProductListJson, "[]")
 	})
 }
 
-func TestMiddleware(t *testing.T) {
-	t.Run("middleware should be able to get product list", func(t *testing.T) {
+func getFirstProduct(t *testing.T) Product {
 
-		request, err := newHandlerGetRequest("/products")
-		assertNoError(t, err, "error while creating request,")
+	request, err := newHandlerGetRequest("/products")
+	assertNoError(t, err, "error while creating request,")
 
-		response := httptest.NewRecorder()
+	response := httptest.NewRecorder()
 
-		//var productsHandler = productsHandler(response, request)
+	productsHandler(response, request)
 
-		productsHandlerFunc := http.HandlerFunc(productsHandler)
-		middlewareHandler(productsHandlerFunc)
+	httpResp, err := getHttpResponse(response)
+	assertNoError(t, err, "error from handler response, ")
 
-		httpResp, err := getHttpResponse(response)
+	assertStatusCode(t, httpResp.StatusCode, 200)
+	assertContentType(t, httpResp.ContentType, "application/json")
 
-		assertNoError(t, err, "error from handler response,")
-		assertStatusCode(t, httpResp.StatusCode, 200)
-		assertContentType(t, httpResp.ContentType, "application/json")
-		assertResponseJsonBody(t, httpResp.Body, wantJSON)
-	})
+	var products []Product
+
+	err = json.Unmarshal([]byte(httpResp.Body), &products)
+	if err != nil {
+		//log.Println("Error on unmarshalling products")
+		assertNoError(t, fmt.Errorf("Error on unmarshalling products"), "")
+		t.Fail()
+	}
+	if len(products) < 1 {
+		assertNoError(t, fmt.Errorf("Product list should have one or more products not %d.", len(products)), "")
+		t.Fail()
+	}
+	return products[0]
 }
 
-func getProductList(t *testing.T) string {
+func productList(t *testing.T) string {
 	request, err := newHandlerGetRequest("/products")
 	if err != nil {
 		t.Fatalf("error while creating request, %v", err)
@@ -256,7 +225,6 @@ func getProductList(t *testing.T) string {
 	}
 
 	assertStatusCode(t, httpResp.StatusCode, 200)
-	assertResponseJsonBody(t, httpResp.Body, wantJSON)
 
 	return httpResp.Body
 }
@@ -297,7 +265,7 @@ func newHandlerDeleteRequest(url string) (*http.Request, error) {
 
 func assertNoError(t *testing.T, err error, message string) {
 	if err != nil {
-		t.Fatalf(message, err)
+		t.Fatalf(message+" %v", err)
 	}
 }
 

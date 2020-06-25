@@ -35,6 +35,7 @@ func productHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		product, err := getProduct(productID)
+		w.Header().Set("Content-type", "application/json")
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -134,6 +135,7 @@ func productsHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println("Produce inserted: \n\t", product)
 
 		w.WriteHeader(http.StatusCreated)
+		w.Header().Set("Content-type", "application/json")
 		w.Write([]byte(fmt.Sprintf(`{"productId":%d}`, productID)))
 	case http.MethodOptions:
 		return

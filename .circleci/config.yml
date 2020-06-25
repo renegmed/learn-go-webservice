@@ -46,7 +46,9 @@ jobs:
        
         - run:
             name: Start creating images and containers
-            command: docker-compose up --build -d 
+            command: |
+              cd /home/circleci/.go_workspace/src/github.com/renegmed/learn-go-webservice
+              docker-compose up --build -d 
 
         - run:
             name: Set GOROOT
@@ -60,5 +62,7 @@ jobs:
             command: echo $GOPATH && export PATH="$PATH:$GOROOT/bin"
 
         - run:
-            name: Do Test 
-            command: cd inventory-service && make test 
+            name: Do Test             
+            command: |
+              cd /home/circleci/.go_workspace/src/github.com/renegmed/learn-go-webservice/inventory-service 
+              make test 

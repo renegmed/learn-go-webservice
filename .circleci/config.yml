@@ -18,16 +18,16 @@ jobs:
     working_directory: /go/src/github.com/renegmed/learn-go-webservice/inventoryservice
     steps:
         - checkout 
+        
+        # activate Remote Docker Environment
+        - setup_remote_docker      
         - run: 
             name: Install Docker Compose 
             command: | 
               set -x curl -L https://github.com/docker/compose/releases/download/1.25.3/docker-compose-`uname -s`-`uname -m` > sudo /usr/local/bin/docker-compose chmod +x /usr/local/bin/docker-compose
-        
-        # activate Remote Docker Environment
-        - setup_remote_docker        
-
+               
         - run:
-            name: Start createing images and containers
+            name: Start creating images and containers
             command: docker-compose up --build -d 
 
         - run:

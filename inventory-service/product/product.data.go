@@ -44,7 +44,7 @@ func getProduct(productID int) (*Product, error) {
 }
 
 func GetTopTenProducts() ([]Product, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	results, err := database.DbConn.QueryContext(ctx, `SELECT 
 	productId, 
@@ -78,7 +78,7 @@ func GetTopTenProducts() ([]Product, error) {
 }
 
 func removeProduct(productID int) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	_, err := database.DbConn.ExecContext(ctx, `DELETE FROM products where productId = ?`, productID)
 	if err != nil {
@@ -89,7 +89,7 @@ func removeProduct(productID int) error {
 }
 
 func getProductList() ([]Product, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	results, err := database.DbConn.QueryContext(ctx, `SELECT 
 	productId, 
@@ -123,7 +123,7 @@ func getProductList() ([]Product, error) {
 
 func updateProduct(product Product) error {
 	// if the product id is set, update, otherwise add
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if *product.ProductID == 0 {
 		return errors.New("product has invalid ID")
@@ -151,7 +151,7 @@ func updateProduct(product Product) error {
 }
 
 func insertProduct(product Product) (int, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	result, err := database.DbConn.ExecContext(ctx, `INSERT INTO products  
 	(manufacturer, 

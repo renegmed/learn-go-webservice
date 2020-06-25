@@ -15,7 +15,7 @@ jobs:
   build:
     machine: true 
         # - image: circleci/golang:1.14.4
-    working_directory: /go/src/github.com/renegmed/learn-go-webservice/inventoryservice
+    # working_directory: /go/src/github.com/renegmed/learn-go-webservice/inventoryservice
     steps:
         - checkout 
         
